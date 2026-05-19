@@ -38,6 +38,7 @@ export default function App() {
   // Team pre-selected on main screen before opening a bag
   const [selectedTeamId, setSelectedTeamId] = useState(null)
   const [needTeamWarning, setNeedTeamWarning] = useState(false)
+  const [wrongTeamIds, setWrongTeamIds] = useState(new Set())
 
   // Warn before page refresh/close if game is in progress
   useEffect(() => {
@@ -92,16 +93,23 @@ export default function App() {
       if (t.shielded) return { ...t, shielded: false }
       return { ...t, score: t.score - 1 }
     }))
+    const newWrongIds = new Set([...wrongTeamIds, tid])
+    setWrongTeamIds(newWrongIds)
     const currentIdx = teams.findIndex(t => t.id === tid)
-    const nextIdx = (currentIdx + 1) % teams.length
-    setAnsTeamId(teams[nextIdx].id)
+    let nextIdx = (currentIdx + 1) % teams.length
+    for (let i = 0; i < teams.length; i++) {
+      if (!newWrongIds.has(teams[nextIdx].id)) break
+      nextIdx = (nextIdx + 1) % teams.length
+    }
+    if (!newWrongIds.has(teams[nextIdx].id)) setAnsTeamId(teams[nextIdx].id)
   }
 
   function dismissResult() {
     setPhase('main')
     setCurQ(null)
     setAnsTeamId(null)
-    setSelectedTeamId(null) // reset so next round requires re-selecting
+    setSelectedTeamId(null)
+    setWrongTeamIds(new Set())
   }
 
   function openRBag(id) {
@@ -167,6 +175,18 @@ export default function App() {
         case 'revive':
           if (act && act.score < 0) act.score = 0
           break
+        case 'all_minus1_self_plus2':
+          next.forEach(t => { if (t.shielded) t.shielded = false; else t.score -= 1 })
+          if (act) act.score += 2
+          break
+        case 'give3get5':
+          if (act && tgt) { act.score -= 3; tgt.score += 3; act.score += (doubled ? 10 : 5) }
+          break
+        case 'host_manage':
+          break
+        case 'reverse':
+          if (act) act.score = -act.score
+          break
         case 'steal_turn': setStealNextId(actId); break
         case 'double_next': setDoubleNext(true); break
         default: break
@@ -191,7 +211,7 @@ export default function App() {
     setAnsTeamId(null); setWinTeamId(null); setRewardOpen(false)
     setLastReward(null); setDoubleNext(false); setStealNextId(null)
     setCelebrate(false); setShowManual(false); setShowTarget(false)
-    setSelectedTeamId(null); setNeedTeamWarning(false)
+    setSelectedTeamId(null); setNeedTeamWarning(false); setWrongTeamIds(new Set())
   }
 
   const sorted = [...teams].sort((a, b) => b.score - a.score)
@@ -319,9 +339,10 @@ export default function App() {
       {phase === 'question' && curQ && (
         <QuestionModal q={curQ} teams={teams} ansTeamId={ansTeamId}
           setAnsTeamId={setAnsTeamId}
+          wrongTeamIds={wrongTeamIds}
           onCorrect={handleCorrect}
           onWrong={handleWrong}
-          onClose={() => { setPhase('main'); setCurQ(null) }} />
+          onClose={() => { setPhase('main'); setCurQ(null); setWrongTeamIds(new Set()) }} />
       )}
 
       {phase === 'result' && (

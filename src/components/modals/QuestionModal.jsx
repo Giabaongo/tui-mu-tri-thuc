@@ -1,10 +1,9 @@
 import { useState } from 'react'
 
-export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCorrect, onWrong, onClose }) {
+export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, wrongTeamIds = new Set(), onCorrect, onWrong, onClose }) {
   const [selectedAns, setSelectedAns] = useState(null)
   const [eliminated, setEliminated] = useState(new Set())
   const [wrongFlash, setWrongFlash] = useState(false)
-  const [showAnswer, setShowAnswer] = useState(false)
   const L = ['A','B','C','D']
 
   function handleConfirm() {
@@ -13,7 +12,6 @@ export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCor
     if (selectedAns === q.ans) {
       onCorrect()
     } else {
-      // Eliminate wrong answer, flash, move to next team
       setEliminated(prev => new Set([...prev, selectedAns]))
       setSelectedAns(null)
       setWrongFlash(true)
@@ -47,7 +45,6 @@ export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCor
           {q.opts.map((opt, i) => {
             const isElim = eliminated.has(i)
             const isSel = selectedAns === i
-            const isCorrectRevealed = showAnswer && i === q.ans
 
             return (
               <div key={i}
@@ -56,11 +53,9 @@ export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCor
                   'rounded-xl p-3 border-2 transition-all text-sm font-medium select-none',
                   isElim
                     ? 'bg-gray-100 border-gray-200 opacity-35 cursor-not-allowed text-gray-400 line-through'
-                    : isCorrectRevealed
-                      ? 'bg-green-50 border-green-500 text-green-800 cursor-pointer'
-                      : isSel
-                        ? 'bg-yellow-50 border-yellow-500 ring-2 ring-yellow-400 cursor-pointer shadow-md'
-                        : 'bg-gray-50 border-gray-200 hover:border-red-300 hover:bg-red-50 cursor-pointer',
+                    : isSel
+                      ? 'bg-yellow-50 border-yellow-500 ring-2 ring-yellow-400 cursor-pointer shadow-md'
+                      : 'bg-gray-50 border-gray-200 hover:border-red-300 hover:bg-red-50 cursor-pointer',
                 ].join(' ')}>
                 <span className="font-black text-red-700 mr-1">{L[i]}.</span>
                 {opt}
@@ -87,26 +82,27 @@ export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCor
             Nhóm đang trả lời:
           </div>
           <div className="flex gap-2 justify-center flex-wrap">
-            {teams.map(t => (
-              <button key={t.id}
-                className={`px-3 py-1 rounded-full text-sm font-bold border-2 transition-all
-                  ${ansTeamId === t.id
-                    ? 'bg-red-700 text-white border-red-700 scale-105'
-                    : 'bg-white text-red-700 border-red-300 hover:border-red-600'}`}
-                onClick={() => setAnsTeamId(t.id)}>
-                {t.name}
-              </button>
-            ))}
+            {teams.map(t => {
+              const isWrong = wrongTeamIds.has(t.id)
+              return (
+                <button key={t.id}
+                  disabled={isWrong}
+                  className={`px-3 py-1 rounded-full text-sm font-bold border-2 transition-all
+                    ${isWrong
+                      ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                      : ansTeamId === t.id
+                        ? 'bg-red-700 text-white border-red-700 scale-105'
+                        : 'bg-white text-red-700 border-red-300 hover:border-red-600'}`}
+                  onClick={() => !isWrong && setAnsTeamId(t.id)}>
+                  {t.name}{isWrong ? ' ✕' : ''}
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Action buttons */}
         <div className="flex gap-2 justify-center flex-wrap">
-          <button
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-semibold"
-            onClick={() => setShowAnswer(s => !s)}>
-            {showAnswer ? '🙈 Ẩn đáp án' : '👁️ Xem đáp án'}
-          </button>
           <button
             className={`px-8 py-2.5 font-black rounded-xl text-lg shadow-lg transition-all active:scale-95
               ${canConfirm
@@ -124,21 +120,7 @@ export default function QuestionModal({ q, teams, ansTeamId, setAnsTeamId, onCor
           </div>
         )}
 
-        {/* Steal turn */}
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <div className="text-xs text-gray-400 text-center mb-2">Nhóm khác giành quyền trả lời:</div>
-          <div className="flex gap-2 justify-center flex-wrap">
-            {teams.filter(t => t.id !== ansTeamId).map(t => (
-              <button key={t.id}
-                className="px-2 py-1 bg-orange-50 hover:bg-orange-100 border border-orange-300 text-orange-700 rounded-lg text-xs font-bold"
-                onClick={() => setAnsTeamId(t.id)}>
-                ⚡ {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button className="mt-3 w-full text-gray-400 hover:text-gray-600 text-xs" onClick={onClose}>
+        <button className="mt-4 w-full text-gray-400 hover:text-gray-600 text-xs" onClick={onClose}>
           ✕ Đóng câu hỏi
         </button>
       </div>
