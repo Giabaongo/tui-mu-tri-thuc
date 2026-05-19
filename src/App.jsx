@@ -161,7 +161,7 @@ export default function App() {
           if (act && tgt) { const s = doubled ? 6 : 3; tgt.score -= s; act.score += s }
           break
         case 'give3get1':
-          if (act && tgt) { act.score -= 3; act.score += doubled ? 2 : 1; tgt.score += 3 }
+          if (act && tgt) { tgt.score += 3; act.score += doubled ? 2 : 1 }
           break
         case 'bomb':
           if (act && tgt) { tgt.score = 0; if (act.shielded) act.shielded = false; else act.score -= 3 }
@@ -224,7 +224,7 @@ export default function App() {
       {/* HEADER */}
       <div className="text-center mb-4">
         <div className="text-yellow-400 font-bold tracking-widest text-xs uppercase mb-0.5">
-          Chủ nghĩa xã hội khoa học
+          {/* Chủ nghĩa xã hội khoa học */}
         </div>
         <h1 className="text-white font-black tracking-tight"
           style={{ fontSize: 40, textShadow: '0 3px 18px rgba(255,215,0,0.55)' }}>
@@ -236,26 +236,24 @@ export default function App() {
       </div>
 
       {/* SCOREBOARD */}
-      <div className="rounded-3xl p-4 mb-4" style={{ background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(6px)' }}>
-        <div className="flex items-start gap-3">
-          <div className="flex gap-3 flex-1 justify-center flex-wrap">
-            {teams.map(t => (
-              <TeamCard key={t.id} team={t}
-                active={phase === 'main' ? selectedTeamId === t.id : ansTeamId === t.id || winTeamId === t.id}
-                onClick={() => {
-                  if (phase === 'question') setAnsTeamId(t.id)
-                  else if (phase === 'main') setSelectedTeamId(t.id)
-                }}
-                onDelta={handleDelta} />
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 flex-shrink-0">
+      <div className="rounded-3xl p-4 mb-4 relative" style={{ background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(6px)' }}>
+        <div className="flex gap-3 justify-center flex-wrap pr-24">
+          {teams.map(t => (
+            <TeamCard key={t.id} team={t}
+              active={phase === 'main' ? selectedTeamId === t.id : ansTeamId === t.id || winTeamId === t.id}
+              onClick={() => {
+                if (phase === 'question') setAnsTeamId(t.id)
+                else if (phase === 'main') setSelectedTeamId(t.id)
+              }}
+              onDelta={handleDelta} />
+          ))}
+        </div>
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
             <button className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
               onClick={() => setShowManual(true)}>🔧 Chỉnh điểm</button>
             <button className="px-3 py-2 font-bold rounded-xl text-xs transition-all active:scale-95 text-white whitespace-nowrap"
               style={{ background: 'rgba(255,255,255,0.15)' }}
               onClick={resetGame}>🔄 Reset game</button>
-          </div>
         </div>
         <div className="flex gap-2 justify-center mt-3 flex-wrap">
           {sorted.map((t, i) => (
