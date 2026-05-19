@@ -69,7 +69,11 @@ export default function App() {
       if(t.shielded) return {...t,shielded:false}
       return {...t,score:t.score-1}
     }))
-    setResultCorrect(false); setRewardOpen(false); setPhase('result')
+    // Move to next team in order, stay in question phase
+    const currentIdx = teams.findIndex(t=>t.id===tid)
+    const nextIdx = (currentIdx + 1) % teams.length
+    setAnsTeamId(teams[nextIdx].id)
+    // phase stays 'question' — modal stays open with eliminated answer
   }
 
   function dismissResult() { setPhase('main'); setCurQ(null); setAnsTeamId(null) }
