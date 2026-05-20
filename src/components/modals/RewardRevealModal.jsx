@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { beep } from '../../utils/audio'
 
-export default function RewardRevealModal({ reward, doubled, onApply, onClose }) {
+export default function RewardRevealModal({ reward, onApply, onClose }) {
   const [spinning, setSpinning] = useState(true)
 
   useEffect(() => {
@@ -16,7 +16,6 @@ export default function RewardRevealModal({ reward, doubled, onApply, onClose })
         <div style={{fontSize:100}} className="animate-bounce">🌟</div>
       ) : (
         <div className={`spin-reveal bg-gradient-to-br ${reward.col} rounded-3xl p-8 mx-4 text-center shadow-2xl`} style={{maxWidth:380}}>
-          {doubled && <div className="bg-white/20 rounded-xl px-3 py-1 text-white font-black text-sm mb-3">🚀 NHÂN ĐÔI HIỆU ỨNG!</div>}
           <div style={{fontSize:64}}>{reward.emoji}</div>
           <div className="text-white font-black text-2xl mt-2">{reward.label}</div>
           <div className="text-white/85 text-sm mt-1">{reward.desc}</div>

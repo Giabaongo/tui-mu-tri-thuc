@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "ecc@ecc": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)"
+    ]
+  }
+}

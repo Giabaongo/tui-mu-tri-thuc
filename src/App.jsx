@@ -18,6 +18,7 @@ export default function App() {
   const [usedQBags, setUsedQBags] = useState(new Set())
   const [usedRBags, setUsedRBags] = useState(new Set())
   const [usedQIds, setUsedQIds] = useState(new Set())
+  const [usedRewardIds, setUsedRewardIds] = useState(new Set())
 
   const [phase, setPhase] = useState('main') // main | question | result | reward_reveal
   const [curQ, setCurQ] = useState(null)
@@ -26,10 +27,6 @@ export default function App() {
   const [winTeamId, setWinTeamId] = useState(null)
   const [resultCorrect, setResultCorrect] = useState(false)
   const [rewardOpen, setRewardOpen] = useState(false)
-
-  const [lastReward, setLastReward] = useState(null)
-  const [doubleNext, setDoubleNext] = useState(false)
-  const [stealNextId, setStealNextId] = useState(null)
 
   const [celebrate, setCelebrate] = useState(false)
   const [showManual, setShowManual] = useState(false)
@@ -60,7 +57,7 @@ export default function App() {
   }
 
   function openQBag(id) {
-    const tid = stealNextId || selectedTeamId
+    const tid = selectedTeamId
     if (!tid) {
       setNeedTeamWarning(true)
       setTimeout(() => setNeedTeamWarning(false), 2500)
@@ -72,7 +69,6 @@ export default function App() {
     setUsedQBags(p => new Set([...p, id]))
     setCurQ(q)
     setAnsTeamId(tid)
-    setStealNextId(null)
     setPhase('question')
   }
 
@@ -95,13 +91,19 @@ export default function App() {
     }))
     const newWrongIds = new Set([...wrongTeamIds, tid])
     setWrongTeamIds(newWrongIds)
+    if (newWrongIds.size >= teams.length) {
+      setTimeout(() => {
+        setPhase('main'); setCurQ(null); setAnsTeamId(null); setWrongTeamIds(new Set())
+      }, 1400)
+      return
+    }
     const currentIdx = teams.findIndex(t => t.id === tid)
     let nextIdx = (currentIdx + 1) % teams.length
     for (let i = 0; i < teams.length; i++) {
       if (!newWrongIds.has(teams[nextIdx].id)) break
       nextIdx = (nextIdx + 1) % teams.length
     }
-    if (!newWrongIds.has(teams[nextIdx].id)) setAnsTeamId(teams[nextIdx].id)
+    setAnsTeamId(teams[nextIdx].id)
   }
 
   function dismissResult() {
@@ -112,16 +114,18 @@ export default function App() {
     setWrongTeamIds(new Set())
   }
 
+  function pickR() {
+    const avail = REWARDS.filter(r => !usedRewardIds.has(r.id))
+    const pool = avail.length > 0 ? avail : REWARDS
+    return pool[Math.floor(Math.random() * pool.length)]
+  }
+
   function openRBag(id) {
     if (!rewardOpen) return
     beep('click')
     setUsedRBags(p => new Set([...p, id]))
-    let r = REWARDS[Math.floor(Math.random() * REWARDS.length)]
-    if (r.type === 'reuse_prev') {
-      r = lastReward && lastReward.type !== 'reuse_prev'
-        ? { ...lastReward, label: `♻️ ${lastReward.label}`, desc: `Dùng lại: ${lastReward.desc}` }
-        : REWARDS.find(x => x.type === 'nothing')
-    }
+    const r = pickR()
+    setUsedRewardIds(p => new Set([...p, r.id]))
     setCurReward(r)
     setPhase('reward_reveal')
   }
@@ -134,8 +138,6 @@ export default function App() {
   function applyEffect(targetId) {
     const r = curReward
     const actId = winTeamId
-    const doubled = doubleNext && r.type !== 'nothing' && r.type !== 'reverse'
-    if (doubled) setDoubleNext(false)
 
     setTeams(prev => {
       const next = prev.map(t => ({ ...t }))
@@ -143,58 +145,47 @@ export default function App() {
       const tgt = targetId ? next.find(t => t.id === targetId) : null
 
       switch (r.type) {
-        case 'simple': {
-          const v = doubled ? r.value * 2 : r.value
-          if (act) { if (v < 0 && act.shielded) act.shielded = false; else act.score += v }
+        case 'simple':
+          if (act) { if (r.value < 0 && act.shielded) act.shielded = false; else act.score += r.value }
           break
-        }
         case 'double_self':
-          if (act) act.score = act.score * (doubled ? 3 : 2)
+          if (act) act.score = act.score * 2
           break
         case 'halve_self':
           if (act) act.score = Math.floor(act.score / 2)
           break
         case 'swap':
-          if (act && tgt) { const tmp = act.score; act.score = tgt.score; tgt.score = tmp }
+          if (act && tgt) {
+            if (tgt.shielded) { tgt.shielded = false }
+            else { const tmp = act.score; act.score = tgt.score; tgt.score = tmp }
+          }
           break
         case 'steal3':
-          if (act && tgt) { const s = doubled ? 6 : 3; tgt.score -= s; act.score += s }
+          if (act && tgt) {
+            if (tgt.shielded) { tgt.shielded = false }
+            else { tgt.score -= 3; act.score += 3 }
+          }
           break
         case 'give3get1':
-          if (act && tgt) { tgt.score += 3; act.score += doubled ? 2 : 1 }
-          break
-        case 'bomb':
-          if (act && tgt) { tgt.score = 0; if (act.shielded) act.shielded = false; else act.score -= 3 }
+          if (act && tgt) { tgt.score += 3; act.score += 1 }
           break
         case 'minus2other':
-          if (tgt) { const v = doubled ? 4 : 2; if (tgt.shielded) tgt.shielded = false; else tgt.score -= v }
+          if (tgt) { if (tgt.shielded) tgt.shielded = false; else tgt.score -= 2 }
           break
         case 'shield':
           if (act) act.shielded = true
-          break
-        case 'revive':
-          if (act && act.score < 0) act.score = 0
           break
         case 'all_minus1_self_plus2':
           next.forEach(t => { if (t.shielded) t.shielded = false; else t.score -= 1 })
           if (act) act.score += 2
           break
-        case 'give3get5':
-          if (act && tgt) { act.score -= 3; tgt.score += 3; act.score += (doubled ? 10 : 5) }
-          break
         case 'host_manage':
           break
-        case 'reverse':
-          if (act) act.score = -act.score
-          break
-        case 'steal_turn': setStealNextId(actId); break
-        case 'double_next': setDoubleNext(true); break
         default: break
       }
       return next
     })
 
-    setLastReward(r)
     setCurReward(null); setWinTeamId(null); setRewardOpen(false)
     setShowTarget(false); setPhase('main')
   }
@@ -206,10 +197,9 @@ export default function App() {
   function resetGame() {
     if (!confirm('Reset toàn bộ game về trạng thái ban đầu?')) return
     setTeams(INIT_TEAMS.map(t => ({ ...t })))
-    setUsedQBags(new Set()); setUsedRBags(new Set()); setUsedQIds(new Set())
+    setUsedQBags(new Set()); setUsedRBags(new Set()); setUsedQIds(new Set()); setUsedRewardIds(new Set())
     setPhase('main'); setCurQ(null); setCurReward(null)
     setAnsTeamId(null); setWinTeamId(null); setRewardOpen(false)
-    setLastReward(null); setDoubleNext(false); setStealNextId(null)
     setCelebrate(false); setShowManual(false); setShowTarget(false)
     setSelectedTeamId(null); setNeedTeamWarning(false); setWrongTeamIds(new Set())
   }
@@ -289,18 +279,6 @@ export default function App() {
           ⭐ {teams.find(t => t.id === winTeamId)?.name} trả lời ĐÚNG! Hãy chọn Túi Mù Phần Thưởng! ⭐
         </div>
       )}
-      {doubleNext && (
-        <div className="text-center py-2 rounded-2xl mb-3 font-black text-white text-sm"
-          style={{ background: '#7c3aed' }}>
-          🚀 Phần thưởng lượt này sẽ được NHÂN ĐÔI!
-        </div>
-      )}
-      {stealNextId && (
-        <div className="text-center py-2 rounded-2xl mb-3 font-black text-white text-sm"
-          style={{ background: '#ea580c' }}>
-          ⚡ {teams.find(t => t.id === stealNextId)?.name} sẽ cướp quyền trả lời câu hỏi tiếp theo!
-        </div>
-      )}
 
       {/* MAIN GAME AREA */}
       <div className="grid grid-cols-2 gap-4">
@@ -350,7 +328,7 @@ export default function App() {
       )}
 
       {phase === 'reward_reveal' && curReward && !showTarget && (
-        <RewardRevealModal reward={curReward} doubled={doubleNext}
+        <RewardRevealModal reward={curReward}
           onApply={handleApplyReward}
           onClose={() => { setPhase('main'); setCurReward(null); setRewardOpen(false) }} />
       )}
