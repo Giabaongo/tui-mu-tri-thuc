@@ -31,6 +31,7 @@ export default function App() {
   const [celebrate, setCelebrate] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [showTarget, setShowTarget] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   // Team pre-selected on main screen before opening a bag
   const [selectedTeamId, setSelectedTeamId] = useState(null)
@@ -223,6 +224,35 @@ export default function App() {
         <div className="text-yellow-400/70 text-xs mt-0.5">
           Giai cấp công nhân · Sứ mệnh lịch sử · Công nhân 4.0
         </div>
+      </div>
+
+      {/* RULES PANEL */}
+      <div className="mb-4">
+        <button
+          className="w-full py-2 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+          style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)' }}
+          onClick={() => setShowRules(r => !r)}>
+          📋 Luật chơi {showRules ? '▲' : '▼'}
+        </button>
+        {showRules && (
+          <div className="mt-2 rounded-2xl p-4 text-sm" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(4px)' }}>
+            <p className="text-white/80 mb-3">
+              Lớp được chia thành <span className="text-yellow-300 font-bold">5 nhóm</span> theo danh sách thầy đã chia, mỗi nhóm bắt đầu với <span className="text-yellow-300 font-bold">5 điểm</span>.
+            </p>
+            <p className="text-white/70 mb-2 font-bold">Trò chơi gồm 2 phần "túi mù":</p>
+            <div className="flex gap-4 mb-3">
+              <span className="text-yellow-300 font-bold">📦 Phần 1:</span><span className="text-white/75">Chọn câu hỏi</span>
+              <span className="text-yellow-300 font-bold">🌟 Phần 2:</span><span className="text-white/75">Chọn phần thưởng</span>
+            </div>
+            <p className="text-white/70 font-bold mb-2">Cách chơi:</p>
+            <ul className="space-y-1.5 text-white/75">
+              <li>🎯 Mỗi lượt, một nhóm sẽ chọn túi mù câu hỏi và trả lời.</li>
+              <li>✅ <span className="text-green-400 font-bold">Trả lời đúng:</span> +2 điểm và được chọn 1 túi mù phần thưởng.</li>
+              <li>❌ <span className="text-red-400 font-bold">Trả lời sai:</span> -1 điểm và mất quyền nhận thưởng. Các nhóm khác có thể giành quyền trả lời để nhận +2 điểm và phần thưởng.</li>
+              <li>🎁 Phần thưởng gồm nhiều hiệu ứng ngẫu nhiên.</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* SCOREBOARD */}
